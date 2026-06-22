@@ -8,7 +8,7 @@ on:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: node-k8s-app
-  CLUSTER_NAME: your-eks-cluster-name
+  CLUSTER_NAME: enterprise-eks
 
 jobs:
   deploy:
