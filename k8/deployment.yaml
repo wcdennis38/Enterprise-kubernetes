@@ -2,18 +2,57 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: node-app
+  labels:
+    app: node-app
+
 spec:
   replicas: 2
+
   selector:
     matchLabels:
       app: node-app
+
   template:
     metadata:
       labels:
         app: node-app
+
     spec:
       containers:
-      - name: node-app
-        image: 150460248370.dkr.ecr.us-east-1.amazonaws.com/node-k8s-app:latest
-        ports:
-        - containerPort: 3000
+        - name: node-app
+          image: 150460248370.dkr.ecr.us-east-1.amazonaws.com/node-k8s-app:latest:latest
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 3000
+
+          # 🔐 SECURITY HARDENING
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+
+          # 📊 RESOURCE LIMITS
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # health checks (optional but recommended)
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
