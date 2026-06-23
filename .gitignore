@@ -1,3 +1,11 @@
-node_modules
-npm-debug.log
-.env
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
