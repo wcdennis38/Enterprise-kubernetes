@@ -1,40 +1,73 @@
-fux ci/cd pipeline - name: Configure AWS credentials
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          role-to-assume: arn:aws:iam::150460248370:role/github-actions-eks-role
-          aws-region: ${{ env.AWS_REGION }}
+version: 0.2
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-        run: |
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+env:
+  variables:
+    AWS_REGION: us-east-1
+    ECR_REPOSITORY: node-k8s-app
+    CLUSTER_NAME: enterprise-eks
+    AWS_ACCOUNT_ID: 150460248370
 
-      - name: Build Docker image
-        run: docker build -t $ECR_REPOSITORY .
-        run: |
-          docker build -t $ECR_REPOSITORY .
+phases:
 
-      - name: Tag Docker image
-        run: |
-          docker tag $ECR_REPOSITORY:latest \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:latest
-          docker tag $ECR_REPOSITORY:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+  # =========================
+  # INSTALL PHASE
+  # =========================
+  install:
+    runtime-versions:
+      docker: 20
 
-      - name: Push Docker image to ECR
-        run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:latest
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+    commands:
+      - echo "=== CHECKING TOOLS ==="
+      - aws --version
+      - docker --version
+      - kubectl version --client
 
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig \
-          --name $CLUSTER_NAME \
-          --region $AWS_REGION
-          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+  # =========================
+  # PRE BUILD (ECR LOGIN)
+  # =========================
+  pre_build:
+    commands:
+      - echo "=== LOGIN TO AMAZON ECR ==="
 
-      - name: Deploy to EKS
-        run: kubectl apply -f k8/
+      - aws ecr get-login-password --region $AWS_REGION \
+        | docker login --username AWS \
+        --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+  # =========================
+  # BUILD IMAGE
+  # =========================
+  build:
+    commands:
+      - echo "=== BUILDING DOCKER IMAGE ==="
+
+      - docker build -t $ECR_REPOSITORY:latest .
+
+      - echo "=== TAGGING IMAGE ==="
+
+      - docker tag $ECR_REPOSITORY:latest \
+        $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+
+      - echo "=== PUSHING IMAGE TO ECR ==="
+
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+
+  # =========================
+  # DEPLOY TO EKS
+  # =========================
+  post_build:
+    commands:
+      - echo "=== UPDATE KUBECONFIG ==="
+
+      - aws eks update-kubeconfig \
+        --name $CLUSTER_NAME \
+        --region $AWS_REGION
+
+      - echo "=== DEPLOYING TO EKS ==="
+
+      - kubectl apply -f k8/
+
+      - echo "=== DEPLOYMENT COMPLETE ==="
+
+artifacts:
+  files:
+    - "**/*"
