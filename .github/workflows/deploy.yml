@@ -1,10 +1,11 @@
-name: Deploy to AWS using OIDC
+name: AWS OIDC Deployment
 
 on:
   push:
     branches:
-      - main
+      - main   # change if your branch is different
 
+# REQUIRED for OIDC authentication (this is critical)
 permissions:
   id-token: write
   contents: read
@@ -14,22 +15,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout your repo
+      # 1. Pull your repository code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Configure AWS credentials using OIDC (NO keys needed)
+      # 2. Configure AWS credentials using OIDC (NO access keys used)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::150460248370:role/github-actions-role2
+          role-to-assume: arn:aws:iam::150460248370:role/github-actions-role
           aws-region: us-east-1
 
-      # 3. Verify AWS authentication works
+      # 3. Debug step (confirms AWS auth works)
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
-      # 4. Example deployment step (replace with your real deploy)
-      - name: Deploy step placeholder
+      # 4. Your deployment commands go here
+      - name: Deploy application
         run: |
-          echo "Add your deployment commands here"
+          echo "Replace this with your deployment commands"
