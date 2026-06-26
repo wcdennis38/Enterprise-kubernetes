@@ -1,81 +1,35 @@
-name: Deploy to EKS
+name: Deploy to AWS using OIDC
 
 on:
   push:
     branches:
       - main
 
-env:
-  AWS_REGION: us-east-1
-  ECR_REPOSITORY: node-k8s-app
-  CLUSTER_NAME: enterprise-eks
-  AWS_ACCOUNT_ID: 150460248370
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
-
-      # =========================
-      # CHECKOUT CODE
-      # =========================
-      - name: Checkout code
+      # 1. Checkout your repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # =========================
-      # CONFIGURE AWS (OIDC - NO KEYS)
-      # =========================
+      # 2. Configure AWS credentials using OIDC (NO keys needed)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::150460248370:role/github-actions-eks-role
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::150460248370:role/github-actions-role2
+          aws-region: us-east-1
 
-      # =========================
-      # LOGIN TO ECR
-      # =========================
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
+      # 3. Verify AWS authentication works
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
 
-      # =========================
-      # BUILD DOCKER IMAGE
-      # =========================
-      - name: Build Docker image
+      # 4. Example deployment step (replace with your real deploy)
+      - name: Deploy step placeholder
         run: |
-          docker build -t $ECR_REPOSITORY:latest .
-
-      # =========================
-      # TAG IMAGE
-      # =========================
-      - name: Tag Docker image
-        run: |
-          docker tag $ECR_REPOSITORY:latest \
-          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
-
-      # =========================
-      # PUSH IMAGE
-      # =========================
-      - name: Push Docker image to ECR
-        run: |
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
-
-      # =========================
-      # UPDATE KUBECONFIG
-      # =========================
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig \
-            --name $CLUSTER_NAME \
-            --region $AWS_REGION
-
-      # =========================
-      # DEPLOY TO EKS
-      # =========================
-      - name: Deploy to EKS
-        run: |
-          kubectl apply -f k8/
+          echo "Add your deployment commands here"
